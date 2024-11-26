@@ -4,7 +4,7 @@
 
     <groupId>net.apnic.mrt</groupId>
     <artifactId>mrt</artifactId>
-    <version>0.0.2-RIPE-13-SNAPSHOT</version>
+    <version>0.0.2-RIPE-16</version>
     <packaging>jar</packaging>
 
     <name>Java MRT File Dumper</name>
