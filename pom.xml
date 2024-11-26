@@ -4,7 +4,7 @@
 
     <groupId>net.apnic.mrt</groupId>
     <artifactId>mrt</artifactId>
-    <version>0.0.2-RIPE-16</version>
+    <version>0.0.2-RIPE-16-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Java MRT File Dumper</name>
@@ -15,8 +15,21 @@
         <url>https://github.com/RIPE-NCC/java-mrt</url>
         <connection>scm:git:git@github.com:RIPE-NCC/java-mrt.git</connection>
         <developerConnection>scm:git:git@github.com:RIPE-NCC/java-mrt.git</developerConnection>
-      <tag>HEAD</tag>
+        <tag>HEAD</tag>
   </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>ripe-releases</id>
+            <name>Nexus Release Repository</name>
+            <url>https://artifacts.ripe.net/repository/maven-releases-ncc/</url>
+        </repository>
+        <snapshotRepository>
+            <id>ripe-snapshots</id>
+            <name>Nexus Snapshot Repository</name>
+            <url>https://artifacts.ripe.net/repository/maven-snapshots-ncc/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
