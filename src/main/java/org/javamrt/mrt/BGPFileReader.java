@@ -6,6 +6,7 @@
 
 package org.javamrt.mrt;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.javamrt.progs.route_btoa;
 import org.javamrt.utils.Debug;
 import org.javamrt.utils.RecordAccess;
@@ -20,10 +21,14 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 public class BGPFileReader implements Closeable {
+	public static final Map<String, Integer> metadata = new HashMap<>();
+
 	private static final boolean debug = false;
 	private static boolean lenient = false;
 
@@ -76,9 +81,12 @@ public class BGPFileReader implements Closeable {
 
 		if (this.streamName.endsWith(".gz")) {
 			this.in = new GZIPInputStream(inStream, 8192);
-		} else {
-			this.in = (inStream instanceof BufferedInputStream || inStream instanceof GZIPInputStream)
-					  ? inStream : new BufferedInputStream(inStream);
+		}
+		else if ( this.streamName.endsWith( "bz2" ) ){
+			this.in = new BZip2CompressorInputStream(inStream);
+		}
+		else {
+			this.in = new BufferedInputStream(inStream);
 		}
 
 		this.recordFifo = new LinkedList<MRTRecord>();
@@ -92,7 +100,11 @@ public class BGPFileReader implements Closeable {
 		this.streamName = f.getCanonicalPath();
 		if (this.streamName.endsWith(".gz")) {
 			this.in = new GZIPInputStream(inStream, 8192);
-		} else {
+		}
+		else if ( this.streamName.endsWith( "bz2" ) ){
+			this.in = new BZip2CompressorInputStream(inStream);
+		}
+		else {
 			this.in = new BufferedInputStream(inStream);
 		}
 		this.recordFifo = new LinkedList<MRTRecord>();
@@ -183,7 +195,17 @@ public class BGPFileReader implements Closeable {
 			final int type = RecordAccess.getU16(header, 4);
 			final int subtype = RecordAccess.getU16(header, 6);
 
-			final long recordlen = RecordAccess.getU32(header, 8);
+			final String key = String.format( "TYPE %d SUBTYPE %s", type, subtype );
+
+			if ( metadata.containsKey( key ) )
+			{
+				metadata.put( key, metadata.get( key ) + 1 );
+			}
+			else {
+				metadata.put( key, 1 );
+			}
+
+			long recordlen = RecordAccess.getU32(header, 8);
 
 			if (Debug.compileDebug) Debug.println("TIME: " + time + "\n TYPE: " + type
 						+ "\n SUBTYPE: " + subtype + "\n RECORDLENGTH: "
@@ -191,6 +213,17 @@ public class BGPFileReader implements Closeable {
 
 			if (recordlen > Integer.MAX_VALUE) {
 				throw new MalformedBgpStreamException("Can't have a record longer than 2147483647 bytes");
+			}
+
+			if( type == MRTConstants.BGP4MP_ET ) {
+				// we don't care about the extended timestamp, but we have to get it out of the way
+				byte[] msTimestampBytes = new byte[4];
+				bytesRead = readFromInputStream(this.in, msTimestampBytes, msTimestampBytes.length);
+				if (bytesRead != msTimestampBytes.length) {
+					this.eof = true;
+					throw new MalformedBgpStreamException( "Extended timestamp was malformed" );
+				}
+				recordlen = recordlen - 4;
 			}
 
 			try {
@@ -225,7 +258,6 @@ public class BGPFileReader implements Closeable {
 					return parseTableDump(header, record, subtype);
 
 				case MRTConstants.TABLE_DUMP_v2:
-
 					switch (subtype) {
 						case MRTConstants.PEER_INDEX_TABLE:
 							parsePeerIndexTable(record);
@@ -248,7 +280,7 @@ public class BGPFileReader implements Closeable {
 									"Unknown TABLE_DUMP_V2 subtype" + subtype, header);
 					}
 					break;
-
+				case MRTConstants.BGP4MP_ET:
 				case MRTConstants.BGP4MP:
 					MRTRecord bgp4mp = parseBgp4mp(header, record, subtype);
 					if ((bgp4mp) != null) {

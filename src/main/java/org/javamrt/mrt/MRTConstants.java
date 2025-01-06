@@ -109,6 +109,7 @@ public class MRTConstants {
 	public static final int RIB_GENERIC = 6;
 
 	public static final int BGP4MP = 16;
+	public static final int BGP4MP_ET = 17;
 	public static final int BGP4MP_STATE_CHANGE = 0;
 	public static final int BGP4MP_MESSAGE = 1;
 	public static final int BGP4MP_ENTRY = 2;
